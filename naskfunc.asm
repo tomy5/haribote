@@ -86,8 +86,8 @@ load_idtr:		; void load_idtr(int limit, int addr);
 	RET
 
 ; これは使わない関数
-;write_mem8: ; void write_mem8(int addr, int data);
-	;MOV		ECX,[ESP+4]		; [ESP+4]にaddrが入っているのでそれをECXに読み込む
-	;MOV		AL,[ESP+8]		; [ESP+8]にdataが入っているのでそれをALに読み込む
-	;MOV		[ECX],AL
-	;RET
+write_mem8: ; void write_mem8(int addr, int data);
+	MOV		ECX,[ESP+4]		; [ESP+4]にaddrが入っているのでそれをECXに読み込む
+	MOV		AL,[ESP+8]		; [ESP+8]にdataが入っているのでそれをALに読み込む
+	MOV		[ECX],AL
+	RET
