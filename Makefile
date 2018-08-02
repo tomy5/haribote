@@ -17,9 +17,11 @@ asmhead.bin : asmhead.asm Makefile
 
 naskfunc.o : naskfunc.asm Makefile
 	$(NASM) -f elf naskfunc.asm -o naskfunc.o
+hankaku.o : hankaku.c
+	$(CC) -c -march=i486 -m32 -fno-pic -nostdlib hankaku.c
 
-bootpack.hrb : bootpack.c har.ld naskfunc.o Makefile
-	$(CC) -march=i486 -m32 -fno-pic -nostdlib -T har.ld bootpack.c naskfunc.o -o bootpack.hrb
+bootpack.hrb : bootpack.c har.ld naskfunc.o hankaku.o Makefile
+	$(CC) -W -march=i486 -m32 -fno-pic -nostdlib -T har.ld bootpack.c naskfunc.o hankaku.o -o bootpack.hrb
 
 haribote.sys : asmhead.bin bootpack.hrb Makefile
 	cat asmhead.bin bootpack.hrb > haribote.sys
@@ -27,6 +29,13 @@ haribote.sys : asmhead.bin bootpack.hrb Makefile
 haribote.img : ipl10.bin haribote.sys Makefile
 	mformat -f 1440 -C -B ipl10.bin -i haribote.img ::
 	mcopy haribote.sys -i haribote.img ::
+
+# Tool
+fconv : font_convert.c
+	gcc -o font_convert.c fconv
+
+makefont : makefont.c
+	gcc -o makefont.c makefont
 
 # ƒRƒ}ƒ“ƒh
 
@@ -44,3 +53,6 @@ clean :
 	rm -f *.img
 	rm -f *.hrb
 	rm -f *.o
+	# Tool
+	rm -f makefont
+	rm -f fconv
