@@ -7,6 +7,7 @@ section .text
 	GLOBAL io_out8, io_out16, io_out32
 	GLOBAL io_load_eflags, io_store_eflags
 	GLOBAL load_gdtr, load_idtr
+	EXTERN inthandler21, inthandler27, inthandler2c
 	;GLOBAL write_mem8
 
 io_hlt: ; void io_hlt(void);
@@ -91,3 +92,20 @@ write_mem8: ; void write_mem8(int addr, int data);
 	MOV		AL,[ESP+8]		; [ESP+8]にdataが入っているのでそれをALに読み込む
 	MOV		[ECX],AL
 	RET
+
+asm_inthandler21:
+	push es
+	push ds
+	pushad
+	mov eax, esp
+	push eax
+	mov ax, ss
+	mov ds, ax
+	mov es, ax
+	call inthandler21
+	pop eax
+	popad
+	pop ds
+	pop ds
+	pop es
+	iretd

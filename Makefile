@@ -23,8 +23,9 @@ dsctbl.o : dsctbl.c
 	$(CC) -c -march=i486 -m32 -fno-pic -nostdlib dsctbl.c
 graphic.o : graphic.c
 	$(CC) -c -march=i486 -m32 -fno-pic -nostdlib graphic.c
-
-bootpack.hrb : bootpack.c har.ld naskfunc.o hankaku.o dsctbl.o graphic.o Makefile
+int.o : int.c
+	$(CC) -c -march=i486 -m32 -fno-pic -nostdlib int.c
+bootpack.hrb : bootpack.c har.ld naskfunc.o hankaku.o dsctbl.o graphic.o int.o Makefile
 	$(CC) -W -march=i486 -m32 -fno-pic -nostdlib -T har.ld bootpack.c *.o -o bootpack.hrb
 
 haribote.sys : asmhead.bin bootpack.hrb Makefile
