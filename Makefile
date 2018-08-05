@@ -2,12 +2,12 @@ MAKE     = make
 NASM     = nasm
 CC      = gcc
 
-# ƒfƒtƒHƒ‹ƒg“®ì
+# ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆå‹•ä½œ
 
 default :
 	$(MAKE) img
 
-# ƒtƒ@ƒCƒ‹¶¬‹K‘¥
+# ãƒ•ã‚¡ã‚¤ãƒ«ç”Ÿæˆè¦å‰‡
 
 ipl10.bin : ipl10.asm Makefile
 	$(NASM) -o ipl10.bin ipl10.asm
@@ -25,8 +25,10 @@ graphic.o : graphic.c
 	$(CC) -c -march=i486 -m32 -fno-pic -nostdlib graphic.c
 int.o : int.c
 	$(CC) -c -march=i486 -m32 -fno-pic -nostdlib int.c
-bootpack.hrb : bootpack.c har.ld naskfunc.o hankaku.o dsctbl.o graphic.o int.o Makefile
-	$(CC) -W -march=i486 -m32 -fno-pic -nostdlib -T har.ld bootpack.c *.o -o bootpack.hrb
+fifo.o : fifo.c
+	$(CC) -c -march=i486 -m32 -fno-pic -nostdlib fifo.c
+bootpack.hrb : bootpack.c har.ld naskfunc.o hankaku.o dsctbl.o graphic.o int.o fifo.o Makefile
+	$(CC) -W -march=i486 -m32 -fno-pic -nostdlib -T har.ld bootpack.c naskfunc.o hankaku.o dsctbl.o graphic.o int.o fifo.o -o bootpack.hrb
 
 haribote.sys : asmhead.bin bootpack.hrb Makefile
 	cat asmhead.bin bootpack.hrb > haribote.sys
@@ -42,7 +44,7 @@ fconv : font_convert.c
 makefont : makefont.c
 	gcc -o makefont.c makefont
 
-# ƒRƒ}ƒ“ƒh
+# ã‚³ãƒžãƒ³ãƒ‰
 
 img :
 	$(MAKE) haribote.img
@@ -58,6 +60,3 @@ clean :
 	rm -f *.img
 	rm -f *.hrb
 	rm -f *.o
-	# Tool
-	rm -f makefont
-	rm -f font_convert

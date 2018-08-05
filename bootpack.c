@@ -1,95 +1,160 @@
 #include "bootpack.h"
 
-/*
-struct BOOTINFO {
-	char cyls, leds, vmode, reserve;
-	short scrnx, scrny;
-	char *vram;
+struct MOUSE_DEC {
+	unsigned char buf[3], phase;
+	int x, y, btn;
 };
 
-struct SEGMENT_DESCRIPTOR {
-	short limit_low, base_low;
-	char base_mid, access_right;
-	char limit_high, base_high;
-};
-
-struct GATE_DESCRIPTOR {
-	short offset_low, selector;
-	char dw_count, access_right;
-	short offset_high;
-};
-
-extern void io_hlt(void);
-//extern void write_mem8(int addr, int data);
-extern void io_cli(void);
-extern void io_out8(int port, int data);
-extern int io_load_eflags(void);
-extern void io_store_eflags(int eflags);
-
-extern char hankaku[4096];
-
-void init_pelette(void);
-void set_pelette(int start, int end, unsigned char *rgb);
-void boxfill8(unsigned char *vram, int xsize, unsigned char c, int x0, int y0, int x1, int y1);
-void init_screen(char *vram, int x, int y);
-void putfont8(char *vram, int xsize, int x, int y, char c, char *font);
-void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s);
-void init_mouse_cursor8(char *mouse, char bc);
-void putblock8_8(char *vram, int vxsize, int pxsize, int pysize, int px0, int py0, char *buf, int bxsize);
-
-void init_gdtidt(void);
-void set_segmdesc(struct SEGMENT_DESCRIPTOR *sd, unsigned int limit, int base, int ar);
-void set_gatedesc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar);
-extern void load_gdtr(int limit, int addr);
-extern void load_idtr(int limit, int addr);
-
-/*
-static char font_A[16] = {
-		0x00, 0x18, 0x18, 0x18, 0x18, 0x24, 0x24, 0x24,
-		0x24, 0x7e, 0x42, 0x42, 0x42, 0xe7, 0x00, 0x00,
-};
-*/
+void enable_mouse(struct MOUSE_DEC *mdec);
+void init_keyboard(void);
+int mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat);
 
 void HariMain(void)
 {
-	char s[40];
+	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
+	struct FIFO8 keyfifo, mousefifo;
 	char mcursor[256];
-	int mx, my;
-	
-	struct BOOTINFO *binfo = (struct BOOTINFO *) 0x0ff0;
-	
-	mx = (binfo->scrnx - 16) / 2;
-	my = (binfo->scrny - 28 - 16) / 2;
+	unsigned char s[40], keybuf[32], mousebuf[128];
+	int mx, my, i;
+	struct MOUSE_DEC mdec;
 	
 	init_gdtidt();
 	init_pic();
 	io_sti(); /* IDT/PICの初期化が終わったのでCPUの割り込み禁止を解除 */
-	
-	init_pelette();
-	init_screen(binfo->vram, binfo->scrnx, binfo->scrny);
-	// putfont8(binfo->vram, binfo->scrnx, 10, 10, COL8_FFFFFF, font_A);
-	// putfonts8_asc(binfo->vram, binfo->scrnx, 8, 8, COL8_FFFFFF, "ABC 123");
-	init_mouse_cursor8(mcursor, COL8_008484);
-	putblock8_8(binfo->vram, binfo->scrnx, 16, 16, mx, my, mcursor, 16);
-	putfonts8_asc(binfo->vram, binfo->scrnx, 0, 0, COL8_FFFFFF, s);
-	
+	fifo8_init(&keyfifo, 32, keybuf);
+	fifo8_init(&mousefifo, 128, mousebuf);
 	io_out8(PIC0_IMR, 0xf9); /* PIC1とキーボードを許可(11111001) */
 	io_out8(PIC1_IMR, 0xef); /* マウスを許可(11101111) */
 	
-	/*
-	p = (char *) 0xa0000;
-	
-	boxfill8(p, 320, COL8_FF0000, 20, 20, 120, 120);
-	
-	for (i = 0xa0000; i <= 0xaffff; i++) {
-		p = (char *)i;
-		*p = i & 0x0f;
-		// write_mem8(i, i & 0x0f);
-		// MOV BYTE [i],15
-	}
-	*/
+	init_keyboard();
 
+	init_pelette();
+	init_screen(binfo->vram, binfo->scrnx, binfo->scrny);
+	mx = (binfo->scrnx - 16) / 2;
+	my = (binfo->scrny - 28 - 16) / 2;
+	init_mouse_cursor8(mcursor, COL8_008484);
+	putblock8_8(binfo->vram, binfo->scrnx, 16, 16, mx, my, mcursor, 16);
+	// putfonts8_asc(binfo->vram, binfo->scrnx, 0, 0, COL8_FFFFFF, s);
+
+	enable_mouse(&mdec);
+	
 	for (;;) {
-		io_hlt();
+		io_cli();
+		if (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) == 0) {
+			io_stihlt();
+		} else {
+			if (fifo8_status(&keyfifo) != 0) {
+				i = fifo8_get(&keyfifo);
+				io_sti();
+				boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 0, 16, 15, 31);
+				putfonts8_asc(binfo->vram, binfo->scrnx, 0, 16, COL8_FFFFFF, s);
+			} else if (fifo8_status(&mousefifo) != 0) {
+				i = fifo8_get(&mousefifo);
+				io_sti();
+				if (mouse_decode(&mdec, i) != 0) {
+					boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 32, 16, 32 + 15 * 8 - 1, 31);
+					// putfonts8_asc(binfo->vram, binfo->scrnx, 32, 16, COL8_FFFFFF, s);
+					
+					boxfill8(binfo->vram, binfo->scrnx, COL8_008484, mx, my, mx + 15, my + 15); 
+					mx += mdec.x;
+					my += mdec.y;
+					if (mx < 0) {
+						mx = 0;
+					}
+					if (my < 0) {
+						my = 0;
+					}
+					if (mx > binfo->scrnx - 16) {
+						mx = binfo->scrnx - 16;
+					}
+					if (my > binfo->scrny - 16) {
+						my = binfo->scrny - 16;
+					}
+					boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 0, 0, 79, 15);
+					putblock8_8(binfo->vram, binfo->scrnx, 16, 16, mx, my, mcursor, 16); 
+				}
+			} 
+		}
 	}
+}
+
+
+#define PORT_KEYDAT				0x0060
+#define PORT_KEYSTA				0x0064
+#define PORT_KEYCMD				0x0064
+#define KEYSTA_SEND_NOTREADY	0x02
+#define KEYCMD_WRITE_MODE		0x60
+#define KBC_MODE				0x47
+
+void wait_KBC_sendready(void)
+{
+	/* キーボードコントローラがデータ送信可能になるのを待つ */
+	for (;;) {
+		if ((io_in8(PORT_KEYSTA) & KEYSTA_SEND_NOTREADY) == 0) {
+			break;
+		}
+	}
+	return;
+}
+
+void init_keyboard(void)
+{
+	/* キーボードコントローラの初期化 */
+	wait_KBC_sendready();
+	io_out8(PORT_KEYCMD, KEYCMD_WRITE_MODE);
+	wait_KBC_sendready();
+	io_out8(PORT_KEYDAT, KBC_MODE);
+	return;
+}
+
+#define KEYCMD_SENDTO_MOUSE		0xd4
+#define MOUSECMD_ENABLE			0xf4
+
+void enable_mouse(struct MOUSE_DEC *mdec)
+{
+	/* マウス有効 */
+	wait_KBC_sendready();
+	io_out8(PORT_KEYCMD, KEYCMD_SENDTO_MOUSE);
+	wait_KBC_sendready();
+	io_out8(PORT_KEYDAT, MOUSECMD_ENABLE);
+	mdec->phase = 0;
+	return; /* うまくいくとACK(0xfa)が送信されてくる */
+}
+
+int mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat)
+{
+	if (mdec->phase == 0) {
+		if (dat == 0xfa) {
+			mdec->phase = 1;
+		}
+		return 0;
+	}
+	if (mdec->phase == 1) {
+		if ((dat & 0xc8) == 0x08) {
+			mdec->buf[0] = dat;
+			mdec->phase = 2;
+		}
+		return 0;
+	}
+	if (mdec->phase == 2) {
+		mdec->buf[1] = dat;
+		mdec->phase = 3;
+		return 0;
+	}
+	if (mdec->phase == 3) {
+		mdec->buf[2] = dat;
+		mdec->phase = 1;
+		mdec->btn = mdec->buf[0] & 0x07;
+		mdec->x = mdec->buf[1];
+		mdec->y = mdec->buf[2];
+		if ((mdec->buf[0] & 0x10) != 0) {
+			mdec->x |= 0xffffff00;
+		}
+		if ((mdec->buf[0] & 0x20) != 0) {
+			mdec->y |= 0xffffff00;
+		}
+		mdec->y = - mdec->y; 
+		return 1;
+	}
+	return -1; 
 }

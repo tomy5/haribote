@@ -2,7 +2,7 @@
 ; TAB=4
 
 section .text
-	GLOBAL io_hlt, io_cli, io_sti, io_stihtl
+	GLOBAL io_hlt, io_cli, io_sti, io_stihlt
 	GLOBAL io_in8, io_in16, io_in32
 	GLOBAL io_out8, io_out16, io_out32
 	GLOBAL io_load_eflags, io_store_eflags
@@ -22,7 +22,7 @@ io_sti: ; void io_sti(void);
 	STI
 	RET
 
-io_stihtl: ; void io_stihtl(void);
+io_stihlt: ; void io_stihlt(void);
 	STI
 	HLT
 	RET

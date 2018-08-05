@@ -10,15 +10,33 @@ struct BOOTINFO {       /* 0x0ff0-0x0fff */
 #define ADR_BOOTINFO 0x00000ff0
 
 /* naskfunc.asm */
-extern void io_sti(void);
 extern void io_hlt(void);
-extern void write_mem8(int addr, int data);
 extern void io_cli(void);
+extern void io_sti(void);
+extern void io_stihlt(void);
+extern void write_mem8(int addr, int data);
+extern  int io_in8(int port);
+extern  int io_in16(int port);
+extern  int io_in32(int port);
 extern void io_out8(int port, int data);
-extern int io_load_eflags(void);
+extern void io_out16(int port, int data);
+extern void io_out32(int port, int data);
+extern  int io_load_eflags(void);
+extern void io_store_eflags(int eflags);
 extern void io_store_eflags(int eflags);
 extern void load_gdtr(int limit, int addr);
 extern void load_idtr(int limit, int addr);
+
+/* fifo.c */
+struct FIFO8 {
+	unsigned char *buf;
+	int p, q, size, free, flags;
+};
+
+void fifo8_init(struct FIFO8 *fifo, int size, unsigned char *buf);
+int fifo8_put(struct FIFO8 *fifo, unsigned char data);
+int fifo8_get(struct FIFO8 *fifo);
+int fifo8_status(struct FIFO8 *fifo);
 
 /* graphic.c */
 
@@ -77,6 +95,11 @@ void set_gatedesc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar);
 #define AR_CODE32_ER	0x409a
 
 /* int.c */
+struct KEYBUF {
+	unsigned char data[32];
+	int next;
+};
+
 void init_pic(void);
 void inthandler21(int *esp);
 void inthandler27(int *esp);
