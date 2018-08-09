@@ -53,5 +53,5 @@ int fifo8_get(struct FIFO8 *fifo)
 int fifo8_status(struct FIFO8 *fifo)
 /* どのくらいデータが溜まっているかを報告する */
 {
-	return fifo->size - fifo->free;
+	return ((fifo->size) - (fifo->free));
 }

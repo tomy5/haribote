@@ -5,6 +5,7 @@ struct MOUSE_DEC {
 	int x, y, btn;
 };
 
+extern struct FIFO8 keyfifo, mousefifo;
 void enable_mouse(struct MOUSE_DEC *mdec);
 void init_keyboard(void);
 int mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat);
@@ -12,7 +13,6 @@ int mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat);
 void HariMain(void)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
-	struct FIFO8 keyfifo, mousefifo;
 	char mcursor[256];
 	unsigned char s[40], keybuf[32], mousebuf[128];
 	int mx, my, i;
@@ -29,11 +29,12 @@ void HariMain(void)
 	init_keyboard();
 
 	init_pelette();
-	init_screen(binfo->vram, binfo->scrnx, binfo->scrny);
-	mx = (binfo->scrnx - 16) / 2;
+	init_screen8(binfo->vram, binfo->scrnx, binfo->scrny);
+	mx = (binfo->scrnx - 16) / 2; /* 画面中央になるように座標計算 */
 	my = (binfo->scrny - 28 - 16) / 2;
 	init_mouse_cursor8(mcursor, COL8_008484);
 	putblock8_8(binfo->vram, binfo->scrnx, 16, 16, mx, my, mcursor, 16);
+	putfonts8_asc(binfo->vram, binfo->scrnx, 32, 16, COL8_FFFFFF, "Hello");
 	// putfonts8_asc(binfo->vram, binfo->scrnx, 0, 0, COL8_FFFFFF, s);
 
 	enable_mouse(&mdec);
@@ -41,14 +42,17 @@ void HariMain(void)
 	for (;;) {
 		io_cli();
 		if (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) == 0) {
+			putfonts8_asc(binfo->vram, binfo->scrnx, 64, 64, COL8_FFFFFF, "fifo0");
 			io_stihlt();
 		} else {
+			putfonts8_asc(binfo->vram, binfo->scrnx, 32, 64, COL8_FFFFFF, "else");
 			if (fifo8_status(&keyfifo) != 0) {
 				i = fifo8_get(&keyfifo);
 				io_sti();
 				boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 0, 16, 15, 31);
-				putfonts8_asc(binfo->vram, binfo->scrnx, 0, 16, COL8_FFFFFF, s);
+				putfonts8_asc(binfo->vram, binfo->scrnx, 0, 16, COL8_FFFFFF, "abc");
 			} else if (fifo8_status(&mousefifo) != 0) {
+				putfonts8_asc(binfo->vram, binfo->scrnx, 0, 64, COL8_FFFFFF, "def");
 				i = fifo8_get(&mousefifo);
 				io_sti();
 				if (mouse_decode(&mdec, i) != 0) {
@@ -71,10 +75,13 @@ void HariMain(void)
 						my = binfo->scrny - 16;
 					}
 					boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 0, 0, 79, 15);
+					// 座標を消す
 					putblock8_8(binfo->vram, binfo->scrnx, 16, 16, mx, my, mcursor, 16); 
+					putfonts8_asc(binfo->vram, binfo->scrnx, 128, 16, COL8_FFFFFF, "HELLO");
 				}
 			} 
 		}
+		putfonts8_asc(binfo->vram, binfo->scrnx, 32, 32, COL8_FFFFFF, "DEBUG");
 	}
 }
 
@@ -142,6 +149,7 @@ int mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat)
 		return 0;
 	}
 	if (mdec->phase == 3) {
+		/* マウスの3バイト目を待っている段階 */
 		mdec->buf[2] = dat;
 		mdec->phase = 1;
 		mdec->btn = mdec->buf[0] & 0x07;

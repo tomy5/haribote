@@ -2,8 +2,6 @@
 
 #include "bootpack.h"
 
-#define PORT_KEYDAT 0x0060
-
 void init_pic(void)
 /* PICの初期化 */
 {
@@ -28,43 +26,28 @@ void init_pic(void)
 
 #define PORT_KEYDAT		0x0060
 
-struct KEYBUF keybuf;
+struct FIFO8 keyfifo;
 
 void inthandler21(int *esp)
 {
 	unsigned char data;
 	io_out8(PIC0_OCW2, 0x61);	/* IRQ-01受付完了をPICに通知 */
 	data = io_in8(PORT_KEYDAT);
-	if (keybuf.next < 32) {
-		keybuf.data[keybuf.next] = data;
-		keybuf.next++;
-	}
+	fifo8_put(&keyfifo, data);
 	return;
 }
 
-/* void inthandler21(int *esp)
-{
-	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
-	unsigned char data, s[4];
-	io_out8(PIC0_OCW2, 0x61);
-	data = io_in8(PORT_KEYDAT);
-	boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 0, 16, 15, 31);
-	putfonts8_asc(binfo->vram, binfo->scrnx, 0, 16, COL8_FFFFFF, data);
-	for (;;) {
-		io_hlt();
-	}
-}
-*/
+struct FIFO8 mousefifo;
 
 void inthandler2c(int *esp)
 /* PS/2マウスからの割り込み */
 {
-	struct BOOTINFO *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
-	boxfill8(binfo->vram, binfo->scrnx, COL8_000000, 0, 0, 32 * 8 - 1, 15);
-	putfonts8_asc(binfo->vram, binfo->scrnx, 0, 0, COL8_FFFFFF, "INT 2C (IRQ-12) : PS/2 mouse");
-	for (;;) {
-		io_hlt();
-	}
+	unsigned char data;
+	io_out8(PIC1_OCW2, 0x64);	/* IRQ-12受付完了をPIC1に通知 */
+	io_out8(PIC0_OCW2, 0x62);	/* IRQ-02受付完了をPIC0に通知 */
+	data = io_in8(PORT_KEYDAT);
+	fifo8_put(&mousefifo, data);
+	return;
 }
 
 void inthandler27(int *esp)

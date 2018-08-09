@@ -14,18 +14,15 @@ extern void io_hlt(void);
 extern void io_cli(void);
 extern void io_sti(void);
 extern void io_stihlt(void);
-extern void write_mem8(int addr, int data);
 extern  int io_in8(int port);
-extern  int io_in16(int port);
-extern  int io_in32(int port);
 extern void io_out8(int port, int data);
-extern void io_out16(int port, int data);
-extern void io_out32(int port, int data);
 extern  int io_load_eflags(void);
-extern void io_store_eflags(int eflags);
 extern void io_store_eflags(int eflags);
 extern void load_gdtr(int limit, int addr);
 extern void load_idtr(int limit, int addr);
+extern void asm_inthandler21(void);
+extern void asm_inthandler27(void);
+extern void asm_inthandler2c(void);
 
 /* fifo.c */
 struct FIFO8 {
@@ -45,7 +42,7 @@ extern char hankaku[4096];
 void init_pelette(void);
 void set_pelette(int start, int end, unsigned char *rgb);
 void boxfill8(unsigned char *vram, int xsize, unsigned char c, int x0, int y0, int x1, int y1);
-void init_screen(char *vram, int x, int y);
+void init_screen8(char *vram, int x, int y);
 void putfont8(char *vram, int xsize, int x, int y, char c, char *font);
 void putfonts8_asc(char *vram, int xsize, int x, int y, char c, unsigned char *s);
 void init_mouse_cursor8(char *mouse, char bc);
@@ -74,17 +71,14 @@ struct SEGMENT_DESCRIPTOR {
 	char base_mid, access_right;
 	char limit_high, base_high;
 };
-
 struct GATE_DESCRIPTOR {
 	short offset_low, selector;
 	char dw_count, access_right;
 	short offset_high;
 };
-
 void init_gdtidt(void);
 void set_segmdesc(struct SEGMENT_DESCRIPTOR *sd, unsigned int limit, int base, int ar);
 void set_gatedesc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar);
-
 #define ADR_IDT			0x0026f800
 #define LIMIT_IDT		0x000007ff
 #define ADR_GDT			0x00270000
@@ -93,13 +87,9 @@ void set_gatedesc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar);
 #define LIMIT_BOTPAK	0x0007ffff
 #define AR_DATA32_RW	0x4092
 #define AR_CODE32_ER	0x409a
+#define AR_INTGATE32	0x008e
 
 /* int.c */
-struct KEYBUF {
-	unsigned char data[32];
-	int next;
-};
-
 void init_pic(void);
 void inthandler21(int *esp);
 void inthandler27(int *esp);

@@ -7,6 +7,7 @@ section .text
 	GLOBAL io_out8, io_out16, io_out32
 	GLOBAL io_load_eflags, io_store_eflags
 	GLOBAL load_gdtr, load_idtr
+	GLOBAL asm_inthandler21, asm_inthandler27, asm_inthandler2c
 	EXTERN inthandler21, inthandler27, inthandler2c
 	;GLOBAL write_mem8
 
@@ -106,6 +107,37 @@ asm_inthandler21:
 	pop eax
 	popad
 	pop ds
+	pop es
+	iretd
+
+asm_inthandler27:
+	push es
+	push ds
+	pushad
+	mov eax, esp
+	push eax
+	mov ax, ss
+	mov ds, ax
+	mov es, ax
+	call inthandler27
+	pop eax
+	popad
+	pop ds
+	pop es
+	iretd
+	
+asm_inthandler2c:
+	push es
+	push ds
+	pushad
+	mov eax, esp
+	push eax
+	mov ax, ss
+	mov ds, ax
+	mov es, ax
+	call inthandler2c
+	pop eax
+	popad
 	pop ds
 	pop es
 	iretd
