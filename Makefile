@@ -36,7 +36,7 @@ img :
 
 run :
 	$(MAKE) img
-	qemu-system-i386 -fda haribote.img
+	qemu-system-i386 -drive file=haribote.img,format=raw,if=floppy -boot a
 
 clean :
 	rm -f *.bin
