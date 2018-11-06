@@ -22,8 +22,8 @@ void init_gdtidt(void)
 	
 	/* IDTの設定 */
 	set_gatedesc(idt + 0x21, (int)asm_inthandler21, 2*8, AR_INTGATE32);
-	set_gatedesc(idt + 0x27, (int)asm_inthandler21, 2*8, AR_INTGATE32);
-	set_gatedesc(idt + 0x2c, (int)asm_inthandler21, 2*8, AR_INTGATE32);
+	set_gatedesc(idt + 0x27, (int)asm_inthandler27, 2*8, AR_INTGATE32);
+	set_gatedesc(idt + 0x2c, (int)asm_inthandler2c, 2*8, AR_INTGATE32);
 	
 	return;
 }

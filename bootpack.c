@@ -42,17 +42,14 @@ void HariMain(void)
 	for (;;) {
 		io_cli();
 		if (fifo8_status(&keyfifo) + fifo8_status(&mousefifo) == 0) {
-			putfonts8_asc(binfo->vram, binfo->scrnx, 64, 64, COL8_FFFFFF, "fifo0");
 			io_stihlt();
 		} else {
-			putfonts8_asc(binfo->vram, binfo->scrnx, 32, 64, COL8_FFFFFF, "else");
 			if (fifo8_status(&keyfifo) != 0) {
 				i = fifo8_get(&keyfifo);
 				io_sti();
 				boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 0, 16, 15, 31);
 				putfonts8_asc(binfo->vram, binfo->scrnx, 0, 16, COL8_FFFFFF, "abc");
 			} else if (fifo8_status(&mousefifo) != 0) {
-				putfonts8_asc(binfo->vram, binfo->scrnx, 0, 64, COL8_FFFFFF, "def");
 				i = fifo8_get(&mousefifo);
 				io_sti();
 				if (mouse_decode(&mdec, i) != 0) {
@@ -77,11 +74,9 @@ void HariMain(void)
 					boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 0, 0, 79, 15);
 					// 座標を消す
 					putblock8_8(binfo->vram, binfo->scrnx, 16, 16, mx, my, mcursor, 16); 
-					putfonts8_asc(binfo->vram, binfo->scrnx, 128, 16, COL8_FFFFFF, "HELLO");
 				}
 			} 
 		}
-		putfonts8_asc(binfo->vram, binfo->scrnx, 32, 32, COL8_FFFFFF, "DEBUG");
 	}
 }
 
